@@ -208,6 +208,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("rwkv", "RwkvModel"),
         ("sam", "SamModel"),
         ("sam2","Sam2Model"),
+        ("sam2_video", "Sam2VideoModel"),
         ("sam2_hiera_det_model","Sam2HeriaDetModel"),
         ("sam2_vision_model","Sam2VisionModel"),
         ("seamless_m4t", "SeamlessM4TModel"),
@@ -1232,6 +1233,7 @@ MODEL_FOR_MASK_GENERATION_MAPPING_NAMES = OrderedDict(
     [
         ("sam", "SamModel"),
         ("sam2", "Sam2Model"),
+        ("sam2_video", "Sam2Model"),
     ]
 )
 
