@@ -382,8 +382,8 @@ def eager_attention_forward(
     if attention_mask is not None:
         attn_weights = attn_weights + attention_mask
 
-    attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=ms.float32).to(query.dtype)
-    attn_weights = nn.functional.dropout(attn_weights, p=dropout, training=module.training)
+    attn_weights = mint.softmax(attn_weights, dim=-1, dtype=ms.float32).to(query.dtype)
+    attn_weights = mint.nn.Dropout(attn_weights, p=dropout, training=module.training)
     attn_output = ops.matmul(attn_weights, value)
     attn_output = attn_output.transpose(1, 2).contiguous()
 
@@ -1146,8 +1146,8 @@ class Sam2VideoPromptEncoder(nn.Cell):
         """Embeds point prompts."""
         points = points + 0.5  # Shift to center of pixel
         if pad:
-            points = mint.nn.functional.pad(points, (0, 0, 0, 1), mode="constant", value=0)
-            labels = mint.nn.functional.pad(labels, (0, 1), mode="constant", value=-1)
+            points = mint.pad(points, (0, 0, 0, 1), mode="constant", value=0)
+            labels = mint.pad(labels, (0, 1), mode="constant", value=-1)
         input_shape = (self.input_image_size, self.input_image_size)
         point_embedding = self.shared_embedding(points, input_shape)
 
@@ -1172,7 +1172,7 @@ class Sam2VideoPromptEncoder(nn.Cell):
         boxes = boxes + 0.5  # Shift to center of pixel
         coords = boxes.view(*boxes.shape[:2], 2, 2)
         # add padding point for consistency with the original implementation
-        coords = mint.nn.functional.pad(coords, (0, 0, 0, 1), mode="constant", value=0)
+        coords = mint.pad(coords, (0, 0, 0, 1), mode="constant", value=0)
         corner_embedding = self.shared_embedding(coords, (self.input_image_size, self.input_image_size))
         corner_embedding[:, :, 0, :] += self.point_embed.weight[2]
         corner_embedding[:, :, 1, :] += self.point_embed.weight[3]
