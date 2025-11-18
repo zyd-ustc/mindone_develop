@@ -933,7 +933,7 @@ class Sam2VideoMemoryFuserCXBlock(GradientCheckpointingLayer):
             config.memory_fuser_embed_dim, config.memory_fuser_intermediate_dim
         )  # pointwise/1x1 convs, implemented with linear layers
         self.pointwise_conv2 = mint.nn.Linear(config.memory_fuser_intermediate_dim, config.memory_fuser_embed_dim)
-        self.scale = nn.Parameter(
+        self.scale = ms.Parameter(
             config.memory_fuser_layer_scale_init_value * mint.ones((config.memory_fuser_embed_dim)),
             requires_grad=True,
         )
