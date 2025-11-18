@@ -383,7 +383,7 @@ def eager_attention_forward(
         attn_weights = attn_weights + attention_mask
 
     attn_weights = mint.softmax(attn_weights, dim=-1, dtype=ms.float32).to(query.dtype)
-    attn_weights = mint.nn.Dropout(attn_weights, p=dropout, training=module.training)
+    attn_weights = F.dropout(attn_weights, p=dropout, training=module.training)
     attn_output = ops.matmul(attn_weights, value)
     attn_output = attn_output.transpose(1, 2).contiguous()
 
