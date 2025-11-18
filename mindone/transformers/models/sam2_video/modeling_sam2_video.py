@@ -1457,7 +1457,7 @@ class Sam2VideoMaskDecoder(nn.Cell):
         best_scores_inds = mint.argmax(multimask_iou_scores, dim=-1)  # [B, P]
         best_scores_inds_expanded = best_scores_inds.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
         best_scores_inds_expanded = best_scores_inds_expanded.expand(
-            (-1, -1, 1, multimask_logits.size(-2), multimask_logits.size(-1))
+            (-1, -1, 1, multimask_logits.shape[-2], multimask_logits.shape[-1])
         )
         best_multimask_logits = mint.gather(multimask_logits, 2, best_scores_inds_expanded)  # [B, P, 1, H, W]
         best_multimask_iou_scores = mint.gather(multimask_iou_scores, 2, best_scores_inds.unsqueeze(-1))  # [B, P, 1]
@@ -1963,7 +1963,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             object_batch_inds = mint.arange(num_objects)
             low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
-            if sam_output_tokens.size(2) > 1:
+            if sam_output_tokens.shape[2] > 1:
                 sam_output_token = sam_output_tokens[batch_inds, object_batch_inds, best_iou_inds]
         else:
             low_res_masks, high_res_masks = low_res_multimasks[:, :, 0], high_res_multimasks[:, :, 0]
@@ -2002,13 +2002,13 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         high_res_masks = mask_inputs_float * out_scale + out_bias
         low_res_masks = F.interpolate(
             high_res_masks.float(),
-            size=(high_res_masks.size(-2) // 4, high_res_masks.size(-1) // 4),
+            size=(high_res_masks.shape[-2] // 4, high_res_masks.shape[-1] // 4),
             align_corners=False,
             mode="bilinear",
             antialias=True,  # use antialias for downsampling
         ).to(backbone_features[0].dtype)
         # a dummy IoU prediction of all 1's under mask input
-        iou_scores = mask_inputs.new_ones((mask_inputs.size(0), 1)).to(backbone_features[0].dtype)
+        iou_scores = mask_inputs.new_ones((mask_inputs.shape[0], 1)).to(backbone_features[0].dtype)
         # produce an object pointer using the SAM decoder from the mask input
         object_pointer = self._single_frame_forward(
             input_masks=self.mask_downsample(mask_inputs_float.to(backbone_features[0].dtype)),
@@ -2264,7 +2264,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
                 suitable for input to the SAM decoder.
         """
         # Get dimensions from the highest-level (lowest-resolution) feature map
-        batch_size = current_vision_features.size(1)
+        batch_size = current_vision_features.shape[1]
         num_channels = self.hidden_dim
         height, width = self.backbone_feature_sizes[-1]
 
@@ -2335,7 +2335,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
 
     def _use_multimask(self, is_init_cond_frame: bool, point_inputs: Optional[dict]) -> bool:
         """Whether to use multimask output in the SAM head."""
-        num_pts = 0 if point_inputs is None else point_inputs["point_labels"].size(2)
+        num_pts = 0 if point_inputs is None else point_inputs["point_labels"].shape[2]
         multimask_output = (
             self.config.multimask_output_in_sam
             and (is_init_cond_frame or self.config.multimask_output_for_tracking)
@@ -2404,7 +2404,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         # High-resolution feature maps for the SAM head, reshape (HW)BC => BCHW
         if len(current_vision_feats) > 1:
             high_res_features = [
-                x.permute(1, 2, 0).view(x.size(1), x.size(2), *s)
+                x.permute(1, 2, 0).view(x.shape[1], x.shape[2], *s)
                 for x, s in zip(current_vision_feats[:-1], self.backbone_feature_sizes[:-1])
             ]
         else:
@@ -2474,7 +2474,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         is_mask_from_pts: bool,
     ) -> tuple[ms.Tensor, list[ms.Tensor]]:
         """Encode the current image and its prediction into a memory feature."""
-        batch_size = current_vision_feats.size(1)  # batch size on this frame
+        batch_size = current_vision_feats.shape[1]  # batch size on this frame
         channels = self.hidden_dim
         height, width = self.backbone_feature_sizes[-1]  # top-level (lowest-resolution) feature size
         # top-level feature, (HW)BC => BCHW
