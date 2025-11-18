@@ -1216,7 +1216,7 @@ class Sam2VideoPromptEncoder(nn.Cell):
             dense_embeddings = self.mask_embed(input_masks)
         else:
             dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
-                batch_size, -1, self.image_embedding_size[0], self.image_embedding_size[1]
+                (batch_size, -1, self.image_embedding_size[0], self.image_embedding_size[1])
             )
 
         return sparse_embeddings, dense_embeddings
@@ -1457,7 +1457,7 @@ class Sam2VideoMaskDecoder(nn.Cell):
         best_scores_inds = mint.argmax(multimask_iou_scores, dim=-1)  # [B, P]
         best_scores_inds_expanded = best_scores_inds.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
         best_scores_inds_expanded = best_scores_inds_expanded.expand(
-            -1, -1, 1, multimask_logits.size(-2), multimask_logits.size(-1)
+            (-1, -1, 1, multimask_logits.size(-2), multimask_logits.size(-1))
         )
         best_multimask_logits = mint.gather(multimask_logits, 2, best_scores_inds_expanded)  # [B, P, 1, H, W]
         best_multimask_iou_scores = mint.gather(multimask_iou_scores, 2, best_scores_inds.unsqueeze(-1))  # [B, P, 1]
