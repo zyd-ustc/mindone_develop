@@ -1963,13 +1963,22 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         sam_output_token = sam_output_tokens[:, :, 0]
         if multimask_output:
             # take the best mask prediction (with the highest IoU estimation)
-            best_iou_inds = mint.argmax(iou_scores, dim=-1)
-            batch_inds = mint.arange(batch_size)
-            object_batch_inds = mint.arange(num_objects)
-            low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
-            high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
+            best_iou_inds = mint.argmax(iou_scores, dim=-1)  # [batch_size, point_batch_size]
+            # Use gather to select the best mask for each sample
+            # low_res_multimasks shape: (batch_size, point_batch_size, num_masks, height, width)
+            # best_iou_inds shape: (batch_size, point_batch_size)
+            best_iou_inds_expanded = best_iou_inds.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)  # [B, P, 1, 1, 1]
+            best_iou_inds_expanded = best_iou_inds_expanded.expand(
+                (-1, -1, 1, low_res_multimasks.shape[-2], low_res_multimasks.shape[-1])
+            )  # [B, P, 1, H, W]
+            low_res_masks = mint.gather(low_res_multimasks, 2, best_iou_inds_expanded).squeeze(2)  # [B, P, H, W]
+            high_res_masks = mint.gather(high_res_multimasks, 2, best_iou_inds_expanded).squeeze(2)  # [B, P, H, W]
             if sam_output_tokens.shape[2] > 1:
-                sam_output_token = sam_output_tokens[batch_inds, object_batch_inds, best_iou_inds]
+                best_iou_inds_for_tokens = best_iou_inds.unsqueeze(-1).unsqueeze(-1)  # [B, P, 1, 1]
+                best_iou_inds_for_tokens = best_iou_inds_for_tokens.expand(
+                    (-1, -1, 1, sam_output_tokens.shape[-1])
+                )  # [B, P, 1, C]
+                sam_output_token = mint.gather(sam_output_tokens, 2, best_iou_inds_for_tokens).squeeze(2)  # [B, P, C]
         else:
             low_res_masks, high_res_masks = low_res_multimasks[:, :, 0], high_res_multimasks[:, :, 0]
 
