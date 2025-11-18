@@ -41,8 +41,7 @@ from ...modeling_layers import GradientCheckpointingLayer
 from ...modeling_outputs import BaseModelOutput
 from ...modeling_utils import ALL_ATTENTION_FUNCTIONS, PreTrainedModel
 from ...processing_utils import Unpack
-from ...pytorch_utils import compile_compatible_method_lru_cache
-from ...utils import ModelOutput, auto_docstring
+from ...utils import ModelOutput
 from ...utils.generic import OutputRecorder
 from ..auto import AutoModel
 from transformers import Sam2VideoConfig, Sam2VideoMaskDecoderConfig, Sam2VideoPromptEncoderConfig
@@ -341,7 +340,6 @@ class Sam2VideoPositionEmbeddingSine(nn.Cell):
         self.normalize = normalize
         self.scale = 2 * math.pi if scale is None else scale
 
-    @compile_compatible_method_lru_cache(maxsize=1)
     def construct(
         self,
         shape: ms.Size,
@@ -1049,7 +1047,6 @@ class Sam2VideoMemoryEncoder(nn.Cell):
 
 
 @dataclass
-@auto_docstring(custom_intro="Base class for the vision encoder's outputs.")
 class Sam2VideoVisionEncoderOutput(ModelOutput):
     r"""
     last_hidden_state (`ms.Tensor` of shape `(batch_size, height, width, hidden_size)`):
@@ -1501,7 +1498,6 @@ def get_1d_sine_pe(pos_inds, dim, temperature=10000):
     return pos_embed
 
 
-@auto_docstring
 class Sam2VideoModel(Sam2VideoPreTrainedModel):
     input_modalities = ["video", "text"]
     _can_record_outputs = {"mask_decoder_attentions": OutputRecorder(Sam2VideoTwoWayAttentionBlock, index=2)}
