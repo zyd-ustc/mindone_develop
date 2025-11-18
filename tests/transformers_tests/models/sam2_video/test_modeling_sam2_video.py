@@ -32,6 +32,7 @@ import mindspore as ms
 
 from tests.modeling_test_utils import compute_diffs, generalized_parse_args, get_modules
 from tests.transformers_tests.models.modeling_common import floats_numpy
+from mindone.transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession
 
 DTYPE_AND_THRESHOLDS = {"fp32": 5e-4, "fp16": 5e-3, "bf16": 5e-2}
 MODES = [1]
@@ -214,7 +215,41 @@ class Sam2VideoModelTester:
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
         config, pixel_values = config_and_inputs
-        inputs_dict = {"pixel_values": pixel_values}
+        
+        # Create video tensor: (num_frames, channels, height, width)
+        num_frames = 3
+        video = np.stack([pixel_values[0] for _ in range(num_frames)], axis=0)
+        video = ms.Tensor(video, dtype=ms.float32)
+        
+        # Create inference session
+        inference_session = Sam2VideoInferenceSession(
+            video=video,
+            video_height=self.image_size,
+            video_width=self.image_size,
+            dtype=ms.float32,
+        )
+        
+        # Add object and point inputs for frame 0
+        obj_id = 0
+        obj_idx = inference_session.obj_id_to_idx(obj_id)
+        frame_idx = 0
+        
+        # Create point inputs: (batch_size=1, point_batch_size=1, num_points=1, 2)
+        # Format should match what _run_single_frame_inference expects
+        point_coords = floats_numpy([1, 1, 1, 2]) * self.image_size  # (1, 1, 1, 2)
+        point_labels = np.array([[[[1]]]], dtype=np.int32)  # (1, 1, 1) - positive point
+        
+        inference_session.add_point_inputs(
+            obj_idx=obj_idx,
+            frame_idx=frame_idx,
+            inputs={
+                "point_coords": ms.Tensor(point_coords, dtype=ms.float32),
+                "point_labels": ms.Tensor(point_labels, dtype=ms.int32),
+            }
+        )
+        inference_session.obj_with_new_inputs.append(obj_id)
+        
+        inputs_dict = {"inference_session": inference_session, "frame_idx": frame_idx}
         return config, inputs_dict
 
 
@@ -231,7 +266,7 @@ _CASES = [
         {},
         (),
         inputs_dict,
-        {"iou_scores": 0},
+        {"pred_masks": 0},
     ],
 ]
 
