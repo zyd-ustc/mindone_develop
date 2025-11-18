@@ -226,7 +226,6 @@ class Sam2VisionNeck(nn.Cell):
                     scale_factor=2.0,
                     mode="nearest",
                     align_corners=None,
-                    antialias=False,
                 ).to(lateral_features.dtype)
                 prev_features = lateral_features + top_down_features
 
