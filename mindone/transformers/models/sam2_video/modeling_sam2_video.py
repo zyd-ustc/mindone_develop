@@ -1982,11 +1982,11 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             high_res_masks = high_res_masks_flat.view(batch_size, num_objects, *mask_shape)
             if sam_output_tokens.shape[2] > 1:
                 # sam_output_tokens shape: (batch_size, num_objects, num_mask_tokens, hidden_size)
-                # Use gather to select the best token for each (batch, object) pair
-                # Expand best_iou_inds to shape (batch_size, num_objects, 1, hidden_size) for gather
-                best_iou_inds_expanded = best_iou_inds.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, -1, sam_output_tokens.shape[-1])
-                # Use gather on dimension 2 (num_mask_tokens dimension)
-                sam_output_token = mint.gather(sam_output_tokens, 2, best_iou_inds_expanded).squeeze(2)
+                # Use the same flattened indexing approach as masks for consistency
+                sam_output_token_flat = sam_output_tokens[batch_flat, obj_flat, best_flat]
+                # sam_output_token_flat shape: (batch_size * num_objects, hidden_size)
+                # Reshape back to (batch_size, num_objects, hidden_size)
+                sam_output_token = sam_output_token_flat.view(batch_size, num_objects, -1)
         else:
             low_res_masks, high_res_masks = low_res_multimasks[:, :, 0], high_res_multimasks[:, :, 0]
 
