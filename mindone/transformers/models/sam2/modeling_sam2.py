@@ -787,7 +787,7 @@ class Sam2PromptEncoder(nn.Cell):
         corner_embedding[:, :, 2, :] = self.not_a_point_embed.weight.expand_as(corner_embedding[:, :, 2, :])
         return corner_embedding
 
-    def forward(
+    def construct(
         self,
         input_points: Optional[Tuple[ms.Tensor, ms.Tensor]],
         input_labels: Optional[ms.Tensor],
@@ -982,7 +982,7 @@ class Sam2TwoWayTransformer(nn.Cell):
         self.final_attn_token_to_image = Sam2Attention(config)
         self.layer_norm_final_attn = mint.nn.LayerNorm(config.hidden_size)
 
-    def forward(
+    def construct(
         self,
         point_embeddings: Tensor,
         image_embeddings: Tensor,
@@ -1091,7 +1091,7 @@ class Sam2MaskDecoder(nn.Cell):
         self.dynamic_multimask_stability_delta = config.dynamic_multimask_stability_delta
         self.dynamic_multimask_stability_thresh = config.dynamic_multimask_stability_thresh
 
-    def forward(
+    def construct(
         self,
         image_embeddings: ms.Tensor,
         image_positional_embeddings: ms.Tensor,
@@ -1412,7 +1412,7 @@ class Sam2Model(Sam2PreTrainedModel, GenerationMixin):
         image_embeddings (`ms.Tensor` of shape `(batch_size, output_channels, window_size, window_size)`):
             Image embeddings, this is used by the mask decoder to generate masks and iou scores. For more memory
             efficient computation, users can first retrieve the image embeddings using the `get_image_embeddings`
-            method, and then feed them to the `forward` method instead of feeding the `pixel_values`.
+            method, and then feed them to the `construct` method instead of feeding the `pixel_values`.
         multimask_output (`bool`, *optional*):
             In the original implementation and paper, the model always outputs 3 masks per image (or per point / per
             bounding box if relevant). However, it is possible to just output a single mask, that corresponds to the
