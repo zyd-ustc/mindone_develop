@@ -105,7 +105,7 @@ class Sam2VideoInferenceSession:
         video: Optional[ms.Tensor] = None,
         video_height: Optional[int] = None,
         video_width: Optional[int] = None,
-        dtype: Union[ms.dtype, str] = "float32",
+        dtype: ms.dtype = ms.float32,
         max_vision_features_cache_size: int = 1,
     ):
         # store as a dictionary to avoid double memory allocation with mint.cat when adding new frames
