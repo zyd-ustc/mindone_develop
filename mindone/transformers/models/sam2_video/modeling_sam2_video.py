@@ -676,7 +676,7 @@ def rotate_pairwise(x):
 
     This is an optimized version of the following more explicit implementation:
     ```python
-    x_rotated = mint.zeros_like(x, dtype=x.dtype, device=x.device)
+    x_rotated = mint.zeros_like(x, dtype=x.dtype)
     x_rotated[..., ::2] = -x[..., 1::2]
     x_rotated[..., 1::2] = x[..., ::2]
     return x_rotated
@@ -934,7 +934,7 @@ class Sam2VideoMemoryFuserCXBlock(GradientCheckpointingLayer):
         )  # pointwise/1x1 convs, implemented with linear layers
         self.pointwise_conv2 = mint.nn.Linear(config.memory_fuser_intermediate_dim, config.memory_fuser_embed_dim)
         self.scale = nn.Parameter(
-            config.memory_fuser_layer_scale_init_value * mint.ones(config.memory_fuser_embed_dim),
+            config.memory_fuser_layer_scale_init_value * mint.ones((config.memory_fuser_embed_dim)),
             requires_grad=True,
         )
 
@@ -1041,7 +1041,7 @@ class Sam2VideoMemoryEncoder(nn.Cell):
         vision_features = self.memory_fuser(vision_features)
         vision_features = self.projection(vision_features)
 
-        vision_pos_enc = self.position_encoding(vision_features.shape, vision_features.device, vision_features.dtype)
+        vision_pos_enc = self.position_encoding(vision_features.shape, vision_features.dtype)
 
         return vision_features, vision_pos_enc
 
@@ -1490,7 +1490,7 @@ def get_1d_sine_pe(pos_inds, dim, temperature=10000):
     Get 1D sine positional embedding as in the original Transformer paper.
     """
     pe_dim = dim // 2
-    dim_t = mint.arange(pe_dim, dtype=ms.float32, device=pos_inds.device)
+    dim_t = mint.arange(pe_dim, dtype=ms.float32)
     dim_t = temperature ** (2 * (dim_t // 2) / pe_dim)
 
     pos_embed = pos_inds.unsqueeze(-1) / dim_t
@@ -1521,23 +1521,23 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         self.backbone_feature_sizes = config.vision_config.backbone_feature_sizes
         # a single token to indicate no memory embedding from previous frames
         self.hidden_dim = config.vision_config.fpn_hidden_size
-        self.no_memory_embedding = ms.Parameter(mint.zeros(1, 1, self.hidden_dim))
+        self.no_memory_embedding = ms.Parameter(mint.zeros((1, 1, self.hidden_dim)))
         self.config = config
         # For video sequence inference
         self.image_size = config.image_size
         self.memory_attention = Sam2VideoMemoryAttention(config)
         self.memory_encoder = Sam2VideoMemoryEncoder(config)
         self.no_memory_positional_encoding = ms.Parameter(
-            mint.zeros(1, 1, config.vision_config.fpn_hidden_size)
+            mint.zeros((1, 1, config.vision_config.fpn_hidden_size))
         )
         self.mem_dim = config.memory_encoder_output_channels
         self.num_maskmem = config.num_maskmem  # Number of memories accessible
         # Temporal encoding of the memories
         self.memory_temporal_positional_encoding = ms.Parameter(
-            mint.zeros(self.num_maskmem, 1, 1, self.mem_dim)
+            mint.zeros((self.num_maskmem, 1, 1, self.mem_dim))
         )
 
-        self.no_object_pointer = ms.Parameter(mint.zeros(1, self.hidden_dim))
+        self.no_object_pointer = ms.Parameter(mint.zeros((1, self.hidden_dim)))
         # A conv layer to downsample the mask prompt to stride 4 (the same stride as
         # low-res SAM mask logits) and to change its scales from 0~1 to SAM logit scale,
         # so that it can be fed into the SAM mask decoder to generate a pointer.
@@ -1554,7 +1554,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
 
         self.occlusion_spatial_embedding_parameter = None  # compatibility with Sam2
         if config.enable_occlusion_spatial_embedding:
-            self.occlusion_spatial_embedding_parameter = ms.Parameter(mint.zeros(1, self.mem_dim))
+            self.occlusion_spatial_embedding_parameter = ms.Parameter(mint.zeros((1, self.mem_dim)))
 
         self.post_init()
 
@@ -1563,9 +1563,8 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
 
     def get_image_wide_positional_embeddings(self) -> ms.Tensor:
         size = self.prompt_encoder.image_embedding_size
-        target_device = self.shared_image_embedding.positional_embedding.device
         target_dtype = self.shared_image_embedding.positional_embedding.dtype
-        grid = mint.ones(size, device=target_device, dtype=target_dtype)
+        grid = mint.ones((size), dtype=target_dtype)
         y_embed = grid.cumsum(dim=0) - 0.5
         x_embed = grid.cumsum(dim=1) - 0.5
         y_embed = y_embed / size[0]
@@ -1901,9 +1900,9 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         if input_points is None and input_boxes is None:
             # If no points are provide, pad with an empty point (with label -1)
             input_points = mint.zeros(
-                batch_size, 1, 1, 2, dtype=image_embeddings[-1].dtype
+                (batch_size, 1, 1, 2), dtype=image_embeddings[-1].dtype
             )
-            input_labels = -mint.ones(batch_size, 1, 1, dtype=ms.int32)
+            input_labels = -mint.ones((batch_size, 1, 1), dtype=ms.int32)
 
         if input_masks is not None:
             # If mask_inputs is provided, downsize it into low-res mask input if needed
@@ -1959,8 +1958,8 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         if multimask_output:
             # take the best mask prediction (with the highest IoU estimation)
             best_iou_inds = mint.argmax(iou_scores, dim=-1)
-            batch_inds = mint.arange(batch_size, device=high_res_multimasks.device)
-            object_batch_inds = mint.arange(num_objects, device=high_res_multimasks.device)
+            batch_inds = mint.arange(batch_size)
+            object_batch_inds = mint.arange(num_objects)
             low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             if sam_output_tokens.size(2) > 1:
@@ -2008,7 +2007,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             antialias=True,  # use antialias for downsampling
         ).to(backbone_features[0].dtype)
         # a dummy IoU prediction of all 1's under mask input
-        iou_scores = mask_inputs.new_ones(mask_inputs.size(0), 1).to(backbone_features[0].dtype)
+        iou_scores = mask_inputs.new_ones((mask_inputs.size(0), 1)).to(backbone_features[0].dtype)
         # produce an object pointer using the SAM decoder from the mask input
         object_pointer = self._single_frame_forward(
             input_masks=self.mask_downsample(mask_inputs_float.to(backbone_features[0].dtype)),
@@ -2204,7 +2203,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             object_pointers_pos_embed = projected_sine_pe.unsqueeze(1).expand(-1, batch_size, self.mem_dim)
         else:
             object_pointers_pos_embed = object_pointers.new_zeros(
-                len(temporal_offsets), batch_size, self.mem_dim, dtype=object_pointers.dtype
+                (len(temporal_offsets), batch_size, self.mem_dim), dtype=object_pointers.dtype
             )
 
         if self.mem_dim < num_channels:
@@ -2267,7 +2266,6 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         batch_size = current_vision_features.size(1)
         num_channels = self.hidden_dim
         height, width = self.backbone_feature_sizes[-1]
-        device = current_vision_features.device
 
         # If memory is disabled (e.g., for single image SAM), return current features directly.
         if self.num_maskmem == 0:
@@ -2296,18 +2294,18 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         )
 
         memories_to_concatenate, memory_positional_embeddings_to_concatenate = self._build_memory_attention_inputs(
-            temporal_positions_and_previous_outputs, device
+            temporal_positions_and_previous_outputs
         )
 
         # Step 3: Get and process object pointers
         temporal_offsets, pointer_tokens, max_object_pointers_to_use = self._get_object_pointers(
-            inference_session, obj_idx, frame_idx, num_total_frames, device, track_in_reverse_time, streaming
+            inference_session, obj_idx, frame_idx, num_total_frames, track_in_reverse_time, streaming
         )
 
         num_object_pointer_tokens = 0
         if pointer_tokens:
             object_pointers, object_pointers_pos_embed = self._process_object_pointers(
-                temporal_offsets, pointer_tokens, max_object_pointers_to_use, batch_size, num_channels, device
+                temporal_offsets, pointer_tokens, max_object_pointers_to_use, batch_size, num_channels
             )
 
             if object_pointers is not None:
