@@ -32,7 +32,7 @@ import mindspore as ms
 
 from tests.modeling_test_utils import compute_diffs, generalized_parse_args, get_modules
 from tests.transformers_tests.models.modeling_common import floats_numpy
-from mindone.transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession
+from transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession
 
 DTYPE_AND_THRESHOLDS = {"fp32": 5e-4, "fp16": 5e-3, "bf16": 5e-2}
 MODES = [1]
@@ -136,7 +136,6 @@ class Sam2VideoMaskDecoderTester:
 class Sam2VideoModelTester:
     def __init__(
         self,
-        parent,
         num_channels=3,
         image_size=128,
         hidden_size=12,
