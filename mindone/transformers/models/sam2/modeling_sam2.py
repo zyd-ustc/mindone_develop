@@ -270,7 +270,7 @@ def do_pool(x: ms.Tensor, query_stride: Optional[int] = None) -> ms.Tensor:
     query_stride = tuple(query_stride)
     input_dtype = x.dtype
     x = x.to(ms.float32)
-    x = nn.functional.max_pool2d(x, kernel_size=query_stride, stride=query_stride, ceil_mode=False)
+    x = mint.nn.functional.max_pool2d(x, kernel_size=query_stride, stride=query_stride, ceil_mode=False)
     # (B, C, H', W') -> (B, H', W', C)
     x = x.to(input_dtype)
     x = x.permute(0, 2, 3, 1)
