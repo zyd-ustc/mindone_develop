@@ -1292,7 +1292,7 @@ class Sam2Model(Sam2PreTrainedModel, GenerationMixin):
     def get_image_wide_positional_embeddings(self) -> ms.Tensor:
         size = self.prompt_encoder.image_embedding_size
         target_dtype = self.shared_image_embedding.positional_embedding.dtype
-        grid = mint.ones(size, dtype=target_dtype)
+        grid = mint.ones((size), dtype=target_dtype)
         y_embed = grid.cumsum(dim=0) - 0.5
         x_embed = grid.cumsum(dim=1) - 0.5
         y_embed = y_embed / size[0]
@@ -1462,7 +1462,7 @@ class Sam2Model(Sam2PreTrainedModel, GenerationMixin):
             input_points = mint.zeros(
                 (batch_size, 1, 1, 2), dtype=image_embeddings[-1].dtype
             )
-            input_labels = -mint.ones((batch_size, 1, 1, dtype=ms.int32))
+            input_labels = -mint.ones((batch_size, 1, 1), dtype=ms.int32)
 
         if input_masks is not None:
             # If mask_inputs is provided, downsize it into low-res mask input if needed
