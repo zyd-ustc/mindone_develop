@@ -224,7 +224,12 @@ class Sam2VideoInferenceSession:
                 self.store_output(obj_idx, frame_idx, key, value, is_conditioning_frame)
             return
 
+        # Device placement: small tensors stay on inference device, large ones are stored directly
         if output_key in ["object_pointer", "object_score_logits"]:  # Small tensors
+            self.output_dict_per_obj[obj_idx][storage_key][frame_idx][output_key] = output_value
+        elif isinstance(output_value, ms.Tensor):  # Large tensors like masks, features
+            self.output_dict_per_obj[obj_idx][storage_key][frame_idx][output_key] = output_value
+        else:
             self.output_dict_per_obj[obj_idx][storage_key][frame_idx][output_key] = output_value
 
     def get_output(
@@ -2095,11 +2100,15 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
 
             # Load memory features
             # Features are flattened: (Batch, Channels, H, W) -> (H*W, Batch, Channels)
-            memory_features = prev_output_data["maskmem_features"]
+            memory_features = prev_output_data.get("maskmem_features")
+            if memory_features is None:
+                continue  # Skip if maskmem_features is None
             memories_to_concatenate.append(memory_features)
 
             # Spatial positional encoding
-            spatial_memory_pos_embed = prev_output_data["maskmem_pos_enc"]
+            spatial_memory_pos_embed = prev_output_data.get("maskmem_pos_enc")
+            if spatial_memory_pos_embed is None:
+                continue  # Skip if maskmem_pos_enc is None
 
             # Add temporal positional encoding
             # self.memory_temporal_positional_encoding shape: (NumMaskMem, 1, 1, MemDim)
