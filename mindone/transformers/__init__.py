@@ -1196,6 +1196,8 @@ from .models.rt_detr import RTDetrForObjectDetection, RTDetrModel, RTDetrPreTrai
 from .models.rt_detr_v2 import RTDetrV2ForObjectDetection, RTDetrV2Model, RTDetrV2PreTrainedModel
 from .models.rwkv import RwkvForCausalLM, RwkvModel, RwkvPreTrainedModel
 from .models.sam import SamImageProcessor, SamModel, SamPreTrainedModel, SamProcessor
+from .models.sam2 import Sam2ImageProcessorFast, Sam2Model, Sam2VisionModel, Sam2PreTrainedModel, Sam2HieraDetModel, Sam2Processor
+from .models.sam2_video import Sam2VideoModel, Sam2VideoInferenceSession, Sam2VideoPreTrainedModel, Sam2VideoProcessor, Sam2VideoVideoProcessor
 from .models.seamless_m4t import (
     SeamlessM4TConfig,
     SeamlessM4TFeatureExtractor,
