@@ -1079,7 +1079,7 @@ class Sam2VideoPositionalEmbedding(nn.Cell):
     def __init__(self, config: Sam2VideoPromptEncoderConfig):
         super().__init__()
         self.scale = config.scale
-        positional_embedding = ms.Parameter(self.scale * ops.randn((2, config.hidden_size // 2)))
+        self.positional_embedding = ms.Parameter(self.scale * ops.randn((2, config.hidden_size // 2)))
         #self.register_buffer("positional_embedding", positional_embedding)
 
     def construct(self, input_coords, input_shape=None):
