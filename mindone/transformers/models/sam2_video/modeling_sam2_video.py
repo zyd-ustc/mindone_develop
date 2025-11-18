@@ -624,17 +624,17 @@ class Sam2VideoPreTrainedModel(PreTrainedModel):
         super()._init_weights(module)
         if isinstance(module, Sam2VideoModel):
             if module.no_memory_positional_encoding is not None:
-                mint.nn.init.zeros_(module.no_memory_positional_encoding)
+                module.no_memory_positional_encoding.set_data(initializer(Zero(), module.no_memory_positional_encoding.shape, module.no_memory_positional_encoding.dtype)
             if module.memory_temporal_positional_encoding is not None:
-                mint.nn.init.zeros_(module.memory_temporal_positional_encoding)
+                module.memory_temporal_positional_encoding.set_data(initializer(Zero(), module.memory_temporal_positional_encoding.shape, module.memory_temporal_positional_encoding.dtype))
             if module.no_object_pointer is not None:
-                mint.nn.init.zeros_(module.no_object_pointer)
+                module.no_object_pointer.set_data(initializer(Zero(), module.no_object_pointer.shape, module.no_object_pointer.dtype))
             if module.occlusion_spatial_embedding_parameter is not None:
-                mint.nn.init.zeros_(module.occlusion_spatial_embedding_parameter)
+                module.occlusion_spatial_embedding_parameter.set_data(initializer(Zero(), module.occlusion_spatial_embedding_parameter.shape, module.occlusion_spatial_embedding_parameter.dtype))
+
         if isinstance(module, Sam2VideoMemoryFuserCXBlock):
             if module.scale is not None:
-                mint.nn.init.zeros_(module.scale)
-
+                module.scale.set_data(initializer(Zero(), module.scale.shape, module.scale.dtype)
 
 class Sam2VideoVisionRotaryEmbedding(nn.Cell):
     """
