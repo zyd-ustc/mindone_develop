@@ -309,17 +309,17 @@ class Sam2VideoLayerNorm(mint.nn.LayerNorm):
             raise NotImplementedError(f"Unsupported data format: {data_format}")
         self.data_format = data_format
 
-    def forward(self, features: ms.Tensor) -> ms.Tensor:
+    def construct(self, features: ms.Tensor) -> ms.Tensor:
         """
         Args:
             features: Tensor of shape (batch_size, channels, height, width) OR (batch_size, height, width, channels)
         """
         if self.data_format == "channels_first":
             features = features.permute(0, 2, 3, 1)
-            features = super().forward(features)
+            features = super().construct(features)
             features = features.permute(0, 3, 1, 2)
         else:
-            features = super().forward(features)
+            features = super().construct(features)
         return features
 
 
@@ -1321,7 +1321,7 @@ class Sam2VideoMaskDecoder(nn.Cell):
         self.dynamic_multimask_stability_delta = config.dynamic_multimask_stability_delta
         self.dynamic_multimask_stability_thresh = config.dynamic_multimask_stability_thresh
 
-    def forward(
+    def construct(
         self,
         image_embeddings: ms.Tensor,
         image_positional_embeddings: ms.Tensor,
