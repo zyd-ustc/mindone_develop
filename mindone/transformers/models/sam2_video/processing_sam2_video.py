@@ -30,7 +30,7 @@ from mindspore import mint
 
 from ...image_utils import ImageInput
 from ...processing_utils import ProcessorMixin
-from ...tokenization_utils_base import BatchEncoding
+from transformers.tokenization_utils_base import BatchEncoding
 from ...utils import TensorType
 
 from ...video_utils import VideoInput
