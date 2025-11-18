@@ -625,7 +625,7 @@ class Sam2VideoPreTrainedModel(PreTrainedModel):
         super()._init_weights(module)
         if isinstance(module, Sam2VideoModel):
             if module.no_memory_positional_encoding is not None:
-                module.no_memory_positional_encoding.set_data(initializer(Zero(), module.no_memory_positional_encoding.shape, module.no_memory_positional_encoding.dtype)
+                module.no_memory_positional_encoding.set_data(initializer(Zero(), module.no_memory_positional_encoding.shape, module.no_memory_positional_encoding.dtype))
             if module.memory_temporal_positional_encoding is not None:
                 module.memory_temporal_positional_encoding.set_data(initializer(Zero(), module.memory_temporal_positional_encoding.shape, module.memory_temporal_positional_encoding.dtype))
             if module.no_object_pointer is not None:
