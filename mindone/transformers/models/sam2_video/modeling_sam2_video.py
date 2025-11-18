@@ -342,7 +342,7 @@ class Sam2VideoPositionEmbeddingSine(nn.Cell):
 
     def construct(
         self,
-        shape: ms.Size,
+        shape,
         dtype: ms.dtype,
         mask: Optional[ms.Tensor] = None,
     ) -> ms.Tensor:
