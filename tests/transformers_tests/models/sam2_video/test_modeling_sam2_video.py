@@ -251,8 +251,8 @@ def test_named_modules(
     )
 
     with torch.no_grad():
-        pt_outputs = pt_model(*pt_inputs_args, **pt_inputs_kwargs)
-    ms_outputs = ms_model(*ms_inputs_args, **ms_inputs_kwargs)
+        pt_outputs = pt_model._single_frame_forward(*pt_inputs_args, **pt_inputs_kwargs)
+    ms_outputs = ms_model._single_frame_forward(*ms_inputs_args, **ms_inputs_kwargs)
     if outputs_map:
         pt_outputs_n = []
         ms_outputs_n = []
