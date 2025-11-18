@@ -33,7 +33,6 @@ import mindspore as ms
 import mindspore.mint as mint
 import mindspore.mint.nn.functional as F
 from mindspore import Tensor, nn, ops
-from torch import Tensor
 from tqdm import tqdm
 
 from ... import initialization as init
@@ -348,8 +347,8 @@ class Sam2VideoPositionEmbeddingSine(nn.Cell):
         self,
         shape: ms.Size,
         dtype: ms.dtype,
-        mask: Optional[Tensor] = None,
-    ) -> Tensor:
+        mask: Optional[ms.Tensor] = None,
+    ) -> ms.Tensor:
         if mask is None:
             mask = mint.zeros((shape[0], shape[2], shape[3]), dtype=ms.bool)
         not_mask = (~mask).to(dtype)
@@ -489,11 +488,11 @@ class Sam2VideoTwoWayAttentionBlock(nn.Cell):
 
     def construct(
         self,
-        queries: Tensor,
-        keys: Tensor,
-        query_point_embedding: Tensor,
-        key_point_embedding: Tensor,
-        attention_similarity: Tensor,
+        queries: ms.Tensor,
+        keys: ms.Tensor,
+        query_point_embedding: ms.Tensor,
+        key_point_embedding: ms.Tensor,
+        attention_similarity: ms.Tensor,
         **kwargs: Unpack[FlashAttentionKwargs],
     ):
         # Self attention block
@@ -776,7 +775,7 @@ class Sam2VideoRoPEAttention(nn.Cell):
         position_embeddings: tuple[ms.Tensor, ms.Tensor],
         num_k_exclude_rope: int = 0,
         **kwargs: Unpack[FlashAttentionKwargs],
-    ) -> Tensor:
+    ) -> ms.Tensor:
         # Input projections
         batch_size, point_batch_size = query.shape[:2]
         new_shape = (batch_size * point_batch_size, -1, self.num_attention_heads, self.head_dim)
