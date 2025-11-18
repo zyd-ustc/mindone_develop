@@ -28,7 +28,7 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import mindspore as ms
-import mindspore.nn.functional as F
+import mindspore.mint.nn.functional as F
 from mindspore import mint, ops
 
 from ...mindspore_adapter.batched_nms import batched_nms
