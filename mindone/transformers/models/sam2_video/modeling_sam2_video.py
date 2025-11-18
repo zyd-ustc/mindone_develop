@@ -33,6 +33,7 @@ import mindspore as ms
 import mindspore.mint as mint
 import mindspore.mint.nn.functional as F
 from mindspore import Tensor, nn, ops
+from mindspore.common.initializer import Zero, initializer
 from tqdm import tqdm
 
 from ...activations import ACT2FN
