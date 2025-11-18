@@ -43,7 +43,7 @@ from ...modeling_utils import ALL_ATTENTION_FUNCTIONS, PreTrainedModel
 from ...utils import ModelOutput
 from ..auto import AutoModel
 from mindone.transformers.generation import GenerationMixin
-from .configuration_sam2 import (
+from transformers import (
     Sam2Config,
     Sam2HieraDetConfig,
     Sam2MaskDecoderConfig,
