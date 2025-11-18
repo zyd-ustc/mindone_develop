@@ -35,7 +35,6 @@ import mindspore.mint.nn.functional as F
 from mindspore import Tensor, nn, ops
 from tqdm import tqdm
 
-from ... import initialization as init
 from ...activations import ACT2FN
 from ...modeling_flash_attention_utils import FlashAttentionKwargs
 from ...modeling_layers import GradientCheckpointingLayer
@@ -627,16 +626,16 @@ class Sam2VideoPreTrainedModel(PreTrainedModel):
         super()._init_weights(module)
         if isinstance(module, Sam2VideoModel):
             if module.no_memory_positional_encoding is not None:
-                init.zeros_(module.no_memory_positional_encoding)
+                nn.init.zeros_(module.no_memory_positional_encoding)
             if module.memory_temporal_positional_encoding is not None:
-                init.zeros_(module.memory_temporal_positional_encoding)
+                nn.init.zeros_(module.memory_temporal_positional_encoding)
             if module.no_object_pointer is not None:
-                init.zeros_(module.no_object_pointer)
+                nn.init.zeros_(module.no_object_pointer)
             if module.occlusion_spatial_embedding_parameter is not None:
-                init.zeros_(module.occlusion_spatial_embedding_parameter)
+                nn.init.zeros_(module.occlusion_spatial_embedding_parameter)
         if isinstance(module, Sam2VideoMemoryFuserCXBlock):
             if module.scale is not None:
-                init.zeros_(module.scale)
+                nn.init.zeros_(module.scale)
 
 
 class Sam2VideoVisionRotaryEmbedding(nn.Cell):
