@@ -1794,6 +1794,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
 
         return vision_feats, vision_pos_embeds
 
+
     def _single_frame_forward(
         self,
         pixel_values: Optional[ms.Tensor] = None,
@@ -1806,12 +1807,12 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         attention_similarity: Optional[ms.Tensor] = None,
         target_embedding: Optional[ms.Tensor] = None,
         **kwargs: Unpack[FlashAttentionKwargs],
-    ) -> Sam2VideoImageSegmentationOutput:
+        ) -> Sam2VideoImageSegmentationOutput:
         """
         input_points (`ms.Tensor` of shape `(batch_size, num_points, 2)`):
             Input 2D spatial points, this is used by the prompt encoder to encode the prompt. Generally yields to much
             better results. The points can be obtained by passing a list of list of list to the processor that will
-            create corresponding `torch` tensors of dimension 4. The first dimension is the image batch size, the
+            create corresponding `mindspore` tensors of dimension 4. The first dimension is the image batch size, the
             second dimension is the point batch size (i.e. how many segmentation masks do we want the model to predict
             per input point), the third dimension is the number of points per segmentation mask (it is possible to pass
             multiple points for a single mask), and the last dimension is the x (vertical) and y (horizontal)
@@ -1901,7 +1902,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             ]
 
         if input_points is not None and input_labels is None:
-            input_labels = mint.ones_like(input_points[:, :, :, 0], dtype=ms.int)
+            input_labels = mint.ones_like(input_points[:, :, :, 0], dtype=ms.int32)
 
         if input_points is None and input_boxes is None:
             # If no points are provide, pad with an empty point (with label -1)
@@ -1963,25 +1964,13 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         sam_output_token = sam_output_tokens[:, :, 0]
         if multimask_output:
             # take the best mask prediction (with the highest IoU estimation)
-            # low_res_multimasks shape: (batch_size, point_batch_size, num_masks, height, width)
-            # iou_scores shape: (batch_size, point_batch_size, num_masks)
-            best_iou_inds = mint.argmax(iou_scores, dim=-1)  # [batch_size, point_batch_size]
-            # Use GatherD to select the best mask for each sample
-            # Expand best_iou_inds to match the shape for GatherD: (B, P, 1, H, W)
-            best_iou_inds_expanded = best_iou_inds.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)  # [B, P, 1, 1, 1]
-            best_iou_inds_expanded = best_iou_inds_expanded.expand(
-                (-1, -1, 1, low_res_multimasks.shape[-2], low_res_multimasks.shape[-1])
-            )  # [B, P, 1, H, W]
-            # Use ops.GatherD to select along dim=2 (num_masks dimension)
-            low_res_masks = ops.GatherD()(low_res_multimasks, 2, best_iou_inds_expanded).squeeze(2)  # [B, P, H, W]
-            high_res_masks = ops.GatherD()(high_res_multimasks, 2, best_iou_inds_expanded).squeeze(2)  # [B, P, H, W]
+            best_iou_inds = mint.argmax(iou_scores, dim=-1)
+            batch_inds = mint.arange(batch_size)
+            object_batch_inds = mint.arange(num_objects)
+            low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
+            high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             if sam_output_tokens.shape[2] > 1:
-                # sam_output_tokens shape: (batch_size, point_batch_size, num_masks, hidden_size)
-                best_iou_inds_for_tokens = best_iou_inds.unsqueeze(-1).unsqueeze(-1)  # [B, P, 1, 1]
-                best_iou_inds_for_tokens = best_iou_inds_for_tokens.expand(
-                    (-1, -1, 1, sam_output_tokens.shape[-1])
-                )  # [B, P, 1, C]
-                sam_output_token = ops.GatherD()(sam_output_tokens, 2, best_iou_inds_for_tokens).squeeze(2)  # [B, P, C]
+                sam_output_token = sam_output_tokens[batch_inds, object_batch_inds, best_iou_inds]
         else:
             low_res_masks, high_res_masks = low_res_multimasks[:, :, 0], high_res_multimasks[:, :, 0]
 
