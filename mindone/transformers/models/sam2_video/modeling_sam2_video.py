@@ -635,7 +635,7 @@ class Sam2VideoPreTrainedModel(PreTrainedModel):
 
         if isinstance(module, Sam2VideoMemoryFuserCXBlock):
             if module.scale is not None:
-                module.scale.set_data(initializer(Zero(), module.scale.shape, module.scale.dtype)
+                module.scale.set_data(initializer(Zero(), module.scale.shape, module.scale.dtype))
 
 class Sam2VideoVisionRotaryEmbedding(nn.Cell):
     """
