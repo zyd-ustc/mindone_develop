@@ -1271,7 +1271,7 @@ class Sam2Model(Sam2PreTrainedModel, GenerationMixin):
     def __init__(self, config: Sam2Config):
         super().__init__(config)
         self.shared_image_embedding = Sam2PositionalEmbedding(config.prompt_encoder_config)
-        self.vision_encoder = Sam2VisionModel.from_config(config.vision_config)
+        self.vision_encoder = Sam2VisionModel(config.vision_config)
         self.prompt_encoder = Sam2PromptEncoder(config.prompt_encoder_config)
         # The module using it is not a PreTrainedModel subclass so we need this
         config.mask_decoder_config._attn_implementation = config._attn_implementation
