@@ -113,7 +113,6 @@ class Sam2MaskDecoderTester:
 class Sam2ModelTester:
     def __init__(
         self,
-        parent,
         num_channels=3,
         image_size=128,
         hidden_size=12,
@@ -129,7 +128,6 @@ class Sam2ModelTester:
         batch_size=2,
         is_training=False,
     ):
-        self.parent = parent
         self.image_size = image_size
         self.hidden_size = hidden_size
         self.patch_kernel_size = patch_kernel_size
