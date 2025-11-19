@@ -341,13 +341,24 @@ def test_named_modules(
 
     (pt_model, ms_model, pt_dtype, ms_dtype) = get_modules(pt_module, ms_module, dtype, *init_args, **init_kwargs)
     
+    # Make a copy of inputs_kwargs to avoid modifying the original
+    inputs_kwargs = dict(inputs_kwargs) if inputs_kwargs else {}
+    
     # Extract session creation data from inputs_kwargs
-    session_data = inputs_kwargs.pop("video_np")
-    video_height = inputs_kwargs.pop("video_height")
-    video_width = inputs_kwargs.pop("video_width")
-    point_coords = inputs_kwargs.pop("point_coords")
-    point_labels = inputs_kwargs.pop("point_labels")
-    frame_idx = inputs_kwargs.pop("frame_idx")
+    session_data = inputs_kwargs.pop("video_np", None)
+    video_height = inputs_kwargs.pop("video_height", None)
+    video_width = inputs_kwargs.pop("video_width", None)
+    point_coords = inputs_kwargs.pop("point_coords", None)
+    point_labels = inputs_kwargs.pop("point_labels", None)
+    frame_idx = inputs_kwargs.pop("frame_idx", None)
+    
+    # Check if all required data is present
+    if session_data is None or video_height is None or video_width is None or point_coords is None or point_labels is None or frame_idx is None:
+        raise ValueError(
+            f"Missing required session data in inputs_kwargs. "
+            f"Expected keys: video_np, video_height, video_width, point_coords, point_labels, frame_idx. "
+            f"Got keys: {list(inputs_kwargs.keys()) if inputs_kwargs else 'empty'}"
+        )
     
     # Create separate inference sessions for torch and ms
     pt_inference_session = _create_inference_session_for_pt(
