@@ -55,7 +55,7 @@ if is_vision_available():
 if is_mindspore_available():
     import mindspore as ms
     from mindspore import mint
-
+    import mint.nn.functional as F
     from .image_utils import pil_mindspore_interpolation_mapping
 
 
@@ -205,7 +205,7 @@ class BaseVideoProcessor(BaseImageProcessorFast):
             `ms.Tensor`: The converted video.
         """
 
-        video = ms.dataset.vision.c_transforms.ConvertColor(video)
+        video = F.grayscale_to_rgb(video)
         if video.shape[-3] == 3 or not (video[..., 3, :, :] < 255).any():
             return video
 
