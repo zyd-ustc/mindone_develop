@@ -27,6 +27,7 @@ from transformers import (
     Sam2VisionConfig,
     Sam2HieraDetConfig,
 )
+from transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession as PtSam2VideoInferenceSession
 
 import mindspore as ms
 
@@ -214,7 +215,26 @@ class Sam2VideoModelTester:
         config_and_inputs = self.prepare_config_and_inputs()
         config, pixel_values = config_and_inputs
         
-        inputs_dict = {"pixel_values": pixel_values}
+        # Create video tensor: (num_frames, channels, height, width)
+        num_frames = 3
+        video_np = np.stack([pixel_values[0] for _ in range(num_frames)], axis=0)
+        
+        # Create point inputs: (batch_size=1, point_batch_size=1, num_points=1, 2)
+        # Format should match what _run_single_frame_inference expects
+        point_coords = floats_numpy([1, 1, 1, 2]) * self.image_size  # (1, 1, 1, 2)
+        point_labels = np.array([[[[1]]]], dtype=np.int32)  # (1, 1, 1) - positive point
+        
+        frame_idx = 0
+        
+        # Return raw data, session will be created separately for torch and ms
+        inputs_dict = {
+            "video_np": video_np,
+            "video_height": self.image_size,
+            "video_width": self.image_size,
+            "point_coords": point_coords,
+            "point_labels": point_labels,
+            "frame_idx": frame_idx,
+        }
         return config, inputs_dict
 
 
@@ -236,6 +256,80 @@ _CASES = [
 ]
 
 
+def _create_inference_session_for_pt(video_np, video_height, video_width, point_coords, point_labels, frame_idx, dtype):
+    """Create PyTorch inference session."""
+    # Convert numpy to torch tensor
+    if dtype == "fp16":
+        torch_dtype = torch.float16
+    elif dtype == "bf16":
+        torch_dtype = torch.bfloat16
+    else:
+        torch_dtype = torch.float32
+    
+    video = torch.from_numpy(video_np).to(torch_dtype)
+    
+    # Create PyTorch inference session
+    inference_session = PtSam2VideoInferenceSession(
+        video=video,
+        video_height=video_height,
+        video_width=video_width,
+        dtype=torch_dtype,
+    )
+    
+    # Add object and point inputs for frame 0
+    obj_id = 0
+    obj_idx = inference_session.obj_id_to_idx(obj_id)
+    
+    inference_session.add_point_inputs(
+        obj_idx=obj_idx,
+        frame_idx=frame_idx,
+        inputs={
+            "point_coords": torch.from_numpy(point_coords).to(torch_dtype),
+            "point_labels": torch.from_numpy(point_labels).to(torch.int32),
+        }
+    )
+    inference_session.obj_with_new_inputs.append(obj_id)
+    
+    return inference_session
+
+
+def _create_inference_session_for_ms(video_np, video_height, video_width, point_coords, point_labels, frame_idx, dtype):
+    """Create MindSpore inference session."""
+    # Convert numpy to ms tensor
+    if dtype == "fp16":
+        ms_dtype = ms.float16
+    elif dtype == "bf16":
+        ms_dtype = ms.bfloat16
+    else:
+        ms_dtype = ms.float32
+    
+    video = ms.Tensor(video_np, dtype=ms_dtype)
+    
+    # Create MindSpore inference session
+    inference_session = Sam2VideoInferenceSession(
+        video=video,
+        video_height=video_height,
+        video_width=video_width,
+        dtype=ms_dtype,
+    )
+    
+    # Add object and point inputs for frame 0
+    obj_id = 0
+    obj_idx = inference_session.obj_id_to_idx(obj_id)
+    
+    inference_session.add_point_inputs(
+        obj_idx=obj_idx,
+        frame_idx=frame_idx,
+        inputs={
+            "point_coords": ms.Tensor(point_coords, dtype=ms_dtype),
+            "point_labels": ms.Tensor(point_labels, dtype=ms.int32),
+        }
+    )
+    inference_session.obj_with_new_inputs.append(obj_id)
+    
+    return inference_session
+
+
 @pytest.mark.parametrize(
     "name,pt_module,ms_module,init_args,init_kwargs,inputs_args,inputs_kwargs,outputs_map,dtype,mode",
     [case + [dtype] + [mode] for case in _CASES for dtype in DTYPE_AND_THRESHOLDS.keys() for mode in MODES],
@@ -246,13 +340,37 @@ def test_named_modules(
     ms.set_context(mode=mode)
 
     (pt_model, ms_model, pt_dtype, ms_dtype) = get_modules(pt_module, ms_module, dtype, *init_args, **init_kwargs)
+    
+    # Extract session creation data from inputs_kwargs
+    session_data = inputs_kwargs.pop("video_np")
+    video_height = inputs_kwargs.pop("video_height")
+    video_width = inputs_kwargs.pop("video_width")
+    point_coords = inputs_kwargs.pop("point_coords")
+    point_labels = inputs_kwargs.pop("point_labels")
+    frame_idx = inputs_kwargs.pop("frame_idx")
+    
+    # Create separate inference sessions for torch and ms
+    pt_inference_session = _create_inference_session_for_pt(
+        session_data, video_height, video_width, point_coords, point_labels, frame_idx, pt_dtype
+    )
+    ms_inference_session = _create_inference_session_for_ms(
+        session_data, video_height, video_width, point_coords, point_labels, frame_idx, ms_dtype
+    )
+    
+    # Parse remaining args
     pt_inputs_args, pt_inputs_kwargs, ms_inputs_args, ms_inputs_kwargs = generalized_parse_args(
         pt_dtype, ms_dtype, *inputs_args, **inputs_kwargs
     )
+    
+    # Add inference sessions to kwargs
+    pt_inputs_kwargs["inference_session"] = pt_inference_session
+    pt_inputs_kwargs["frame_idx"] = frame_idx
+    ms_inputs_kwargs["inference_session"] = ms_inference_session
+    ms_inputs_kwargs["frame_idx"] = frame_idx
 
     with torch.no_grad():
-        pt_outputs = pt_model._single_frame_forward(*pt_inputs_args, **pt_inputs_kwargs)
-    ms_outputs = ms_model._single_frame_forward(*ms_inputs_args, **ms_inputs_kwargs)
+        pt_outputs = pt_model(*pt_inputs_args, **pt_inputs_kwargs)
+    ms_outputs = ms_model(*ms_inputs_args, **ms_inputs_kwargs)
     if outputs_map:
         pt_outputs_n = []
         ms_outputs_n = []
