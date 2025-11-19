@@ -26,14 +26,15 @@ from transformers import (
     Sam2VideoPromptEncoderConfig,
     Sam2VisionConfig,
     Sam2HieraDetConfig,
+    Sam2VideoProcessor as PtSam2VideoProcessor,
 )
-from transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession as PtSam2VideoInferenceSession
 
 import mindspore as ms
 
 from tests.modeling_test_utils import compute_diffs, generalized_parse_args, get_modules
 from tests.transformers_tests.models.modeling_common import floats_numpy
 from mindone.transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession
+from mindone.transformers.models.sam2_video.processing_sam2_video import Sam2VideoProcessor as MsSam2VideoProcessor
 
 DTYPE_AND_THRESHOLDS = {"fp32": 5e-4, "fp16": 5e-3, "bf16": 5e-2}
 MODES = [1]
@@ -215,25 +216,29 @@ class Sam2VideoModelTester:
         config_and_inputs = self.prepare_config_and_inputs()
         config, pixel_values = config_and_inputs
         
-        # Create video tensor: (num_frames, channels, height, width)
+        # Create video frames as list of numpy arrays: (num_frames, height, width, channels)
         num_frames = 3
-        video_np = np.stack([pixel_values[0] for _ in range(num_frames)], axis=0)
+        # Convert from (channels, height, width) to (height, width, channels) for video frames
+        video_frames = []
+        for i in range(num_frames):
+            frame = pixel_values[0].transpose(1, 2, 0)  # (C, H, W) -> (H, W, C)
+            video_frames.append(frame)
         
-        # Create point inputs: (batch_size=1, point_batch_size=1, num_points=1, 2)
-        # Format should match what _run_single_frame_inference expects
-        point_coords = floats_numpy([1, 1, 1, 2]) * self.image_size  # (1, 1, 1, 2)
-        point_labels = np.array([[[[1]]]], dtype=np.int32)  # (1, 1, 1) - positive point
+        # Create point inputs in the format expected by processor: [[[[x, y]]]]
+        # Format: list[list[list[list[float]]]] - batch, point_batch, num_points, 2
+        points = [[[[self.image_size * 0.5, self.image_size * 0.5]]]]  # Center point
+        labels = [[[1]]]  # Positive point label
         
         frame_idx = 0
+        obj_id = 1
         
-        # Return raw data, session will be created separately for torch and ms
+        # Return data for processor-based session creation
         inputs_dict = {
-            "video_np": video_np,
-            "video_height": self.image_size,
-            "video_width": self.image_size,
-            "point_coords": point_coords,
-            "point_labels": point_labels,
+            "video_frames": video_frames,
+            "points": points,
+            "labels": labels,
             "frame_idx": frame_idx,
+            "obj_id": obj_id,
         }
         return config, inputs_dict
 
@@ -256,78 +261,6 @@ _CASES = [
 ]
 
 
-def _create_inference_session_for_pt(video_np, video_height, video_width, point_coords, point_labels, frame_idx, dtype):
-    """Create PyTorch inference session."""
-    # Convert numpy to torch tensor
-    if dtype == "fp16":
-        torch_dtype = torch.float16
-    elif dtype == "bf16":
-        torch_dtype = torch.bfloat16
-    else:
-        torch_dtype = torch.float32
-    
-    video = torch.from_numpy(video_np).to(torch_dtype)
-    
-    # Create PyTorch inference session
-    inference_session = PtSam2VideoInferenceSession(
-        video=video,
-        video_height=video_height,
-        video_width=video_width,
-        dtype=torch_dtype,
-    )
-    
-    # Add object and point inputs for frame 0
-    obj_id = 0
-    obj_idx = inference_session.obj_id_to_idx(obj_id)
-    
-    inference_session.add_point_inputs(
-        obj_idx=obj_idx,
-        frame_idx=frame_idx,
-        inputs={
-            "point_coords": torch.from_numpy(point_coords).to(torch_dtype),
-            "point_labels": torch.from_numpy(point_labels).to(torch.int32),
-        }
-    )
-    inference_session.obj_with_new_inputs.append(obj_id)
-    
-    return inference_session
-
-
-def _create_inference_session_for_ms(video_np, video_height, video_width, point_coords, point_labels, frame_idx, dtype):
-    """Create MindSpore inference session."""
-    # Convert numpy to ms tensor
-    if dtype == "fp16":
-        ms_dtype = ms.float16
-    elif dtype == "bf16":
-        ms_dtype = ms.bfloat16
-    else:
-        ms_dtype = ms.float32
-    
-    video = ms.Tensor(video_np, dtype=ms_dtype)
-    
-    # Create MindSpore inference session
-    inference_session = Sam2VideoInferenceSession(
-        video=video,
-        video_height=video_height,
-        video_width=video_width,
-        dtype=ms_dtype,
-    )
-    
-    # Add object and point inputs for frame 0
-    obj_id = 0
-    obj_idx = inference_session.obj_id_to_idx(obj_id)
-    
-    inference_session.add_point_inputs(
-        obj_idx=obj_idx,
-        frame_idx=frame_idx,
-        inputs={
-            "point_coords": ms.Tensor(point_coords, dtype=ms_dtype),
-            "point_labels": ms.Tensor(point_labels, dtype=ms.int32),
-        }
-    )
-    inference_session.obj_with_new_inputs.append(obj_id)
-    
-    return inference_session
 
 
 @pytest.mark.parametrize(
@@ -345,27 +278,63 @@ def test_named_modules(
     inputs_kwargs = dict(inputs_kwargs) if inputs_kwargs else {}
     
     # Extract session creation data from inputs_kwargs
-    session_data = inputs_kwargs.pop("video_np", None)
-    video_height = inputs_kwargs.pop("video_height", None)
-    video_width = inputs_kwargs.pop("video_width", None)
-    point_coords = inputs_kwargs.pop("point_coords", None)
-    point_labels = inputs_kwargs.pop("point_labels", None)
+    video_frames = inputs_kwargs.pop("video_frames", None)
+    points = inputs_kwargs.pop("points", None)
+    labels = inputs_kwargs.pop("labels", None)
     frame_idx = inputs_kwargs.pop("frame_idx", None)
+    obj_id = inputs_kwargs.pop("obj_id", None)
     
     # Check if all required data is present
-    if session_data is None or video_height is None or video_width is None or point_coords is None or point_labels is None or frame_idx is None:
+    if video_frames is None or points is None or labels is None or frame_idx is None or obj_id is None:
         raise ValueError(
             f"Missing required session data in inputs_kwargs. "
-            f"Expected keys: video_np, video_height, video_width, point_coords, point_labels, frame_idx. "
+            f"Expected keys: video_frames, points, labels, frame_idx, obj_id. "
             f"Got keys: {list(inputs_kwargs.keys()) if inputs_kwargs else 'empty'}"
         )
     
-    # Create separate inference sessions for torch and ms
-    pt_inference_session = _create_inference_session_for_pt(
-        session_data, video_height, video_width, point_coords, point_labels, frame_idx, pt_dtype
+    # Create processors
+    pt_processor = PtSam2VideoProcessor.from_pretrained("sam2-hiera-tiny")
+    ms_processor = MsSam2VideoProcessor.from_pretrained("sam2-hiera-tiny")
+    
+    # Set dtype for processors
+    if pt_dtype == "fp16":
+        pt_torch_dtype = torch.float16
+    elif pt_dtype == "bf16":
+        pt_torch_dtype = torch.bfloat16
+    else:
+        pt_torch_dtype = torch.float32
+    
+    if ms_dtype == "fp16":
+        ms_ms_dtype = ms.float16
+    elif ms_dtype == "bf16":
+        ms_ms_dtype = ms.bfloat16
+    else:
+        ms_ms_dtype = ms.float32
+    
+    # Initialize video inference sessions using processors
+    pt_inference_session = pt_processor.init_video_session(
+        video=video_frames,
+        dtype=pt_torch_dtype,
     )
-    ms_inference_session = _create_inference_session_for_ms(
-        session_data, video_height, video_width, point_coords, point_labels, frame_idx, ms_dtype
+    ms_inference_session = ms_processor.init_video_session(
+        video=video_frames,
+        dtype=ms_ms_dtype,
+    )
+    
+    # Add inputs to inference sessions using processors
+    pt_processor.add_inputs_to_inference_session(
+        inference_session=pt_inference_session,
+        frame_idx=frame_idx,
+        obj_ids=obj_id,
+        input_points=points,
+        input_labels=labels,
+    )
+    ms_processor.add_inputs_to_inference_session(
+        inference_session=ms_inference_session,
+        frame_idx=frame_idx,
+        obj_ids=obj_id,
+        input_points=points,
+        input_labels=labels,
     )
     
     # Parse remaining args
