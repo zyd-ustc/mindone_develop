@@ -55,7 +55,7 @@ if is_vision_available():
 if is_mindspore_available():
     import mindspore as ms
     from mindspore import mint
-    import mint.nn.functional as F
+
     from .image_utils import pil_mindspore_interpolation_mapping
 
 
@@ -204,15 +204,20 @@ class BaseVideoProcessor(BaseImageProcessorFast):
         Returns:
             `ms.Tensor`: The converted video.
         """
-
-        video = F.grayscale_to_rgb(video)
-        if video.shape[-3] == 3 or not (video[..., 3, :, :] < 255).any():
+        if video.shape[-3] == 3:
             return video
+        if video.shape[-3] == 1:
+            channel_dim = video.ndim - 3
+            return video.repeat_interleave(3, dim=channel_dim)
 
-        # There is a transparency layer, blend it with a white background.
-        # Calculate the alpha proportion for blending.
-        alpha = video[..., 3, :, :] / 255.0
-        video = (1 - alpha[..., None, :, :]) * 255 + alpha[..., None, :, :] * video[..., :3, :, :]
+        if video.shape[-3] == 4:
+            if not (video[..., 3, :, :] < 255).any():
+                return video[..., :3, :, :]
+            
+            alpha = video[..., 3, :, :] / 255.0
+            video = (1 - alpha[..., None, :, :]) * 255 + alpha[..., None, :, :] * video[..., :3, :, :]
+            return video
+        
         return video
 
     def sample_frames(
