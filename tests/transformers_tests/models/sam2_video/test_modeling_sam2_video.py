@@ -43,10 +43,10 @@ MODES = [1]
 class Sam2VideoPromptEncoderTester:
     def __init__(
         self,
-        hidden_size=32,
-        input_image_size=128,
+        hidden_size=256,
+        input_image_size=1024,
         patch_size=16,
-        mask_input_channels=8,
+        mask_input_channels=16,
         num_point_embeddings=4,
         hidden_act="gelu",
         layer_norm_eps=1e-6,
