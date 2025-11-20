@@ -1964,32 +1964,15 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         sam_output_token = sam_output_tokens[:, :, 0]
         if multimask_output:
             # take the best mask prediction (with the highest IoU estimation)
-            best_iou_inds = mint.argmax(iou_scores, dim=-1)  # shape: (batch_size, num_objects)
-            batch_inds = mint.arange(batch_size)
-            object_batch_inds = mint.arange(num_objects)
-            # Create meshgrid for proper broadcasting in MindSpore
-            # PyTorch automatically broadcasts, but MindSpore needs explicit handling
-            batch_grid, obj_grid = mint.meshgrid(batch_inds, object_batch_inds, indexing='ij')
-            batch_flat = batch_grid.flatten()
-            obj_flat = obj_grid.flatten()
-            best_flat = best_iou_inds.flatten()
-            # Use flattened indices to select masks
-            low_res_masks_flat = low_res_multimasks[batch_flat, obj_flat, best_flat]
-            high_res_masks_flat = high_res_multimasks[batch_flat, obj_flat, best_flat]
-            # Reshape back to (batch_size, num_objects, H, W)
-            mask_shape = low_res_masks_flat.shape[1:]
-            low_res_masks = low_res_masks_flat.view(batch_size, num_objects, *mask_shape)
-            high_res_masks = high_res_masks_flat.view(batch_size, num_objects, *mask_shape)
-            if sam_output_tokens.shape[2] > 1:
-                # sam_output_tokens shape: (batch_size, num_objects, num_mask_tokens, hidden_size)
-                # Use the same flattened indexing approach as masks for consistency
-                sam_output_token_flat = sam_output_tokens[batch_flat, obj_flat, best_flat]
-                # sam_output_token_flat shape: (batch_size * num_objects, hidden_size)
-                # Reshape back to (batch_size, num_objects, hidden_size)
-                sam_output_token = sam_output_token_flat.view(batch_size, num_objects, -1)
+            best_iou_inds = torch.argmax(iou_scores, dim=-1)
+            batch_inds = torch.arange(batch_size, device=high_res_multimasks.device)
+            object_batch_inds = torch.arange(num_objects, device=high_res_multimasks.device)
+            low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
+            high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
+            if sam_output_tokens.size(2) > 1:
+                sam_output_token = sam_output_tokens[batch_inds, object_batch_inds, best_iou_inds]
         else:
             low_res_masks, high_res_masks = low_res_multimasks[:, :, 0], high_res_multimasks[:, :, 0]
-
         # Extract object pointer from the SAM output token (with occlusion handling)
         object_pointer = self.object_pointer_proj(sam_output_token)
         lambda_is_obj_appearing = is_obj_appearing.to(object_pointer.dtype)
