@@ -169,6 +169,15 @@ VISION_IMPORT_ERROR = """
 `pip install pillow`. Please note that you may need to restart your runtime after installation.
 """
 
+# docstyle-ignore
+CV2_IMPORT_ERROR = """
+{0} requires the OpenCV library but it was not found in your environment. You can install it with:
+```
+pip install opencv-python
+```
+Please note that you may need to restart your runtime after installation.
+"""
+
 BACKENDS_MAPPING = OrderedDict(
     [
         ("av", (is_av_available, AV_IMPORT_ERROR)),
