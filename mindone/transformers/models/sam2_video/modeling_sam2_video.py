@@ -1835,7 +1835,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         input_boxes (`ms.Tensor` of shape `(batch_size, num_boxes, 4)`):
             Input boxes for the points, this is used by the prompt encoder to encode the prompt. Generally yields to
             much better generated masks. The boxes can be obtained by passing a list of list of list to the processor,
-            that will generate a `torch` tensor, with each dimension corresponding respectively to the image batch
+            that will generate a `mindspore` tensor, with each dimension corresponding respectively to the image batch
             size, the number of boxes per image and the coordinates of the top left and bottom right point of the box.
             In the order (`x1`, `y1`, `x2`, `y2`):
 
@@ -1950,7 +1950,6 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         )
 
         # convert masks from possibly bfloat16 (or float16) to float32
-        # (older PyTorch versions before 2.1 don't support `interpolate` on bf16)
         high_res_multimasks = (
             F.interpolate(
                 low_res_multimasks.squeeze(1).float(),
@@ -1964,9 +1963,9 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         sam_output_token = sam_output_tokens[:, :, 0]
         if multimask_output:
             # take the best mask prediction (with the highest IoU estimation)
-            best_iou_inds = torch.argmax(iou_scores, dim=-1)
-            batch_inds = torch.arange(batch_size, device=high_res_multimasks.device)
-            object_batch_inds = torch.arange(num_objects, device=high_res_multimasks.device)
+            best_iou_inds = mint.argmax(iou_scores, dim=-1)
+            batch_inds = mint.arange(batch_size, device=high_res_multimasks.device)
+            object_batch_inds = mint.arange(num_objects, device=high_res_multimasks.device)
             low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             if sam_output_tokens.shape[2] > 1:
