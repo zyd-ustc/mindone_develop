@@ -149,7 +149,7 @@ class Sam2VideoModelTester:
         backbone_channel_list=[768, 384, 192, 96],
         backbone_feature_sizes=[[256, 256], [128, 128], [64, 64]],
         fpn_hidden_size=256,
-        memory_encoder_hidden_size=32,
+        memory_encoder_hidden_size=256,
         batch_size=2,
         is_training=False,
     ):
