@@ -1969,7 +1969,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             object_batch_inds = torch.arange(num_objects, device=high_res_multimasks.device)
             low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
-            if sam_output_tokens.size(2) > 1:
+            if sam_output_tokens.shape[2] > 1:
                 sam_output_token = sam_output_tokens[batch_inds, object_batch_inds, best_iou_inds]
         else:
             low_res_masks, high_res_masks = low_res_multimasks[:, :, 0], high_res_multimasks[:, :, 0]
