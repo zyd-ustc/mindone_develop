@@ -119,7 +119,7 @@ class Sam2VideoProcessor(ProcessorMixin):
         elif original_sizes is not None:
             if isinstance(original_sizes, ms.Tensor):
                 original_sizes = original_sizes.cpu().tolist()
-            encoding_image_processor = BatchEncoding({"original_sizes": original_sizes}, tensor_type=return_tensors)
+            encoding_image_processor = BatchEncoding({"original_sizes": original_sizes}, tensor_type="np")
         else:
             raise ValueError("Either images or original_sizes must be provided")
 
