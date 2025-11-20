@@ -2507,7 +2507,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             is_obj_appearing = (object_score_logits > 0).float()
             maskmem_features += (1 - is_obj_appearing[..., None]) * self.occlusion_spatial_embedding_parameter[
                 ..., None, None
-            ].expand((*maskmem_features.shape))
+            ].expand(maskmem_features.shape)
 
         # convert to bfloat16 to save memory, and for consistency with the original implementation
         maskmem_features = maskmem_features.to(ms.bfloat16).flatten(2).permute(2, 0, 1)
