@@ -1964,8 +1964,8 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         if multimask_output:
             # take the best mask prediction (with the highest IoU estimation)
             best_iou_inds = mint.argmax(iou_scores, dim=-1)
-            batch_inds = mint.arange(batch_size, device=high_res_multimasks.device)
-            object_batch_inds = mint.arange(num_objects, device=high_res_multimasks.device)
+            batch_inds = mint.arange(batch_size)
+            object_batch_inds = mint.arange(num_objects)
             low_res_masks = low_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             high_res_masks = high_res_multimasks[batch_inds, object_batch_inds, best_iou_inds]
             if sam_output_tokens.shape[2] > 1:
