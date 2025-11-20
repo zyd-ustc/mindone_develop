@@ -1789,7 +1789,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
 
         # Expand to batch size if needed
         if batch_size > 1:
-            vision_feats = vision_feats.expand(batch_size, -1, -1, -1)
+            vision_feats = vision_feats.expand((batch_size, -1, -1, -1))
             vision_pos_embeds = [pe.expand(batch_size, -1, -1, -1) for pe in vision_pos_embeds]
 
         return vision_feats, vision_pos_embeds
@@ -2209,7 +2209,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             )
             sine_pe = get_1d_sine_pe(normalized_temporal_diffs, dim=pointer_tpos_dim).to(object_pointers.dtype)
             projected_sine_pe = self.temporal_positional_encoding_projection_layer(sine_pe)
-            object_pointers_pos_embed = projected_sine_pe.unsqueeze(1).expand(-1, batch_size, self.mem_dim)
+            object_pointers_pos_embed = projected_sine_pe.unsqueeze(1).expand((-1, batch_size, self.mem_dim))
         else:
             object_pointers_pos_embed = object_pointers.new_zeros(
                 (len(temporal_offsets), batch_size, self.mem_dim), dtype=object_pointers.dtype
@@ -2507,7 +2507,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
             is_obj_appearing = (object_score_logits > 0).float()
             maskmem_features += (1 - is_obj_appearing[..., None]) * self.occlusion_spatial_embedding_parameter[
                 ..., None, None
-            ].expand(*maskmem_features.shape)
+            ].expand((*maskmem_features.shape))
 
         # convert to bfloat16 to save memory, and for consistency with the original implementation
         maskmem_features = maskmem_features.to(ms.bfloat16).flatten(2).permute(2, 0, 1)
