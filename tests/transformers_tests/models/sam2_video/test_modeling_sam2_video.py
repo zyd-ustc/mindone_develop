@@ -293,8 +293,8 @@ def test_named_modules(
         )
     
     # Create processors
-    pt_processor = PtSam2VideoProcessor.from_pretrained("sam2-hiera-tiny")
-    ms_processor = MsSam2VideoProcessor.from_pretrained("sam2-hiera-tiny")
+    pt_processor = PtSam2VideoProcessor.from_pretrained("facebook/sam2-hiera-tiny")
+    ms_processor = MsSam2VideoProcessor.from_pretrained("facebook/sam2-hiera-tiny")
     
     # Set dtype for processors
     if pt_dtype == "fp16":
