@@ -146,7 +146,7 @@ class Sam2VideoModelTester:
         patch_padding=3,
         blocks_per_stage=[1, 2, 7, 2],
         embed_dim_per_stage=[96, 192, 384, 768],
-        backbone_channel_list=[96, 48, 24, 12],
+        backbone_channel_list=[768, 384, 192, 96],
         backbone_feature_sizes=[[256, 256], [128, 128], [64, 64]],
         fpn_hidden_size=256,
         memory_encoder_hidden_size=32,
