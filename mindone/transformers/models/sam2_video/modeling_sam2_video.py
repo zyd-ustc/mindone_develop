@@ -1033,7 +1033,7 @@ class Sam2VideoMemoryEncoder(nn.Cell):
         self.position_encoding = Sam2VideoPositionEmbeddingSine(num_pos_feats=output_channels // 2, normalize=True)
         self.projection = mint.nn.Conv2d(hidden_size, output_channels, kernel_size=1)
 
-    def forward(
+    def construct(
         self,
         vision_features: ms.Tensor,
         masks: ms.Tensor,
