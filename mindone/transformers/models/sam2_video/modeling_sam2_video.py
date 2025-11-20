@@ -986,7 +986,7 @@ class Sam2VideoMaskDownSamplerLayer(nn.Cell):
         self.layer_norm = Sam2VideoLayerNorm(out_channels, eps=1e-6, data_format="channels_first")
         self.activation = ACT2FN[config.mask_downsampler_hidden_act]
 
-    def forward(self, x):
+    def construct(self, x):
         return self.activation(self.layer_norm(self.conv(x)))
 
 
@@ -1850,7 +1850,7 @@ class Sam2VideoModel(Sam2VideoPreTrainedModel):
         image_embeddings (`ms.Tensor` of shape `(batch_size, output_channels, window_size, window_size)`):
             Image embeddings, this is used by the mask decoder to generate masks and iou scores. For more memory
             efficient computation, users can first retrieve the image embeddings using the `get_image_embeddings`
-            method, and then feed them to the `forward` method instead of feeding the `pixel_values`.
+            method, and then feed them to the `construct` method instead of feeding the `pixel_values`.
         multimask_output (`bool`, *optional*):
             In the original implementation and paper, the model always outputs 3 masks per image (or per point / per
             bounding box if relevant). However, it is possible to just output a single mask, that corresponds to the
