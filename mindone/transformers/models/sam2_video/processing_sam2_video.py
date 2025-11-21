@@ -553,11 +553,6 @@ class Sam2VideoProcessor(ProcessorMixin):
             pixel_values_video = processed_video.pixel_values_videos[0]
             video_height = processed_video.original_sizes[0][0]
             video_width = processed_video.original_sizes[0][1]
-            print(f"processed_video:{processed_video}")
-            print(f"pixel_values_video:{pixel_values_video}")
-            print(f"video_height:{video_height}")
-            print(f"video_width:{video_width}")
-            print(f"dtype:{dtype}")
         inference_session = Sam2VideoInferenceSession(
             video=pixel_values_video,
             video_height=video_height,
