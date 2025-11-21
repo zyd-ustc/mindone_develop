@@ -265,7 +265,7 @@ def test_named_modules(
         video=ms.Tensor(video_frames),
         video_height=video_height,
         video_width=video_width,
-        max_vision_features_cache_size=1
+        max_vision_features_cache_size=1,
         dtype=ms.float32 if ms_dtype == "fp32" else ms.float16 if ms_dtype == "fp16" else ms.bfloat16,
     )
     obj_idx = session_ms.obj_id_to_idx(1)
