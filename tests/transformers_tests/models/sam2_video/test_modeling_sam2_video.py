@@ -27,12 +27,12 @@ from transformers import (
     Sam2VisionConfig,
     Sam2HieraDetConfig,
 )
-
+from transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession as ptSam2VideoInferenceSession
 import mindspore as ms
 
 from tests.modeling_test_utils import compute_diffs, generalized_parse_args, get_modules
 from tests.transformers_tests.models.modeling_common import floats_numpy
-from mindone.transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession
+from mindone.transformers.models.sam2_video.modeling_sam2_video import msSam2VideoInferenceSession
 
 
 DTYPE_AND_THRESHOLDS = {"fp32": 5e-4, "fp16": 5e-3, "bf16": 5e-2}
@@ -214,7 +214,6 @@ class Sam2VideoModelTester:
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
         config, pixel_values = config_and_inputs
-
         inputs_dict = {
             "video_frames": pixel_values,
             "video_height": 320,
@@ -258,35 +257,34 @@ def test_named_modules(
     inputs_kwargs = dict(inputs_kwargs) if inputs_kwargs else {}
     
     # Extract session creation data from inputs_kwargs
-    video_frames = inputs_kwargs.pop("pixel_values", None)
+    video_frames = inputs_kwargs.pop("video_frames", None)
     video_height = inputs_kwargs.pop("video_height", None)
     video_width = inputs_kwargs.pop("video_width", None)
-    session_ms = Sam2VideoInferenceSession(
-        video=video_frames,
+    session_ms = msSam2VideoInferenceSession(
+        video=ms.Tensor(video_frames),
         video_height=video_height,
         video_width=video_width,
-        dtype=ms_dtype,
+        dtype=ms.float32 if ms_dtype == "fp32" else ms.float16 if ms_dtype == "fp16" else ms.bfloat16
     )
-    session_pt = Sam2VideoInferenceSession(
-        video=video_frames,
+    session_pt = ptSam2VideoInferenceSession(
+        video=torch.Tensor(video_frames),
         video_height=video_height,
         video_width=video_width,
-        dtype=pt_dtype,
+        dtype=torch.float32 if pt_dtype == "fp32" else torch.float16 if pt_dtype == "fp16" else torch.bfloat16,
     )
-    # Parse remaining args
-    pt_inputs_args, pt_inputs_kwargs, ms_inputs_args, ms_inputs_kwargs = generalized_parse_args(
-        pt_dtype, ms_dtype, *inputs_args, **inputs_kwargs
-    )
-    
-    # Add inference sessions to kwargs
-    pt_inputs_kwargs["inference_session"] = session_pt
-    pt_inputs_kwargs["frame_idx"] = 0
-    ms_inputs_kwargs["inference_session"] = session_ms
-    ms_inputs_kwargs["frame_idx"] = 0
+
+    pt_inputs_kwargs = {
+        "inference_session": session_pt,
+        "frame_idx": 0,
+    }
+    ms_inputs_kwargs = {
+        "inference_session": session_ms,
+        "frame_idx": 0,
+    }
 
     with torch.no_grad():
-        pt_outputs = pt_model(*pt_inputs_args, **pt_inputs_kwargs)
-    ms_outputs = ms_model(*ms_inputs_args, **ms_inputs_kwargs)
+        pt_outputs = pt_model(None, **pt_inputs_kwargs)
+    ms_outputs = ms_model(None, **ms_inputs_kwargs)
     if outputs_map:
         pt_outputs_n = []
         ms_outputs_n = []
