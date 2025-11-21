@@ -171,10 +171,11 @@ class Sam2VideoModelTester:
         self.mask_decoder_tester = Sam2VideoMaskDecoderTester()
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_numpy([16, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_numpy([self.num_channels, self.image_size, self.image_size])
+        video_frames = np.tile(pixel_values[np.newaxis, :, :, :], (16, 1, 1, 1))
         config = self.get_config()
 
-        return config, pixel_values
+        return config, video_frames
 
     def get_config(self):
         backbone_config = Sam2HieraDetConfig(
@@ -213,9 +214,9 @@ class Sam2VideoModelTester:
 
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
-        config, pixel_values = config_and_inputs
+        config, video_frames = config_and_inputs
         inputs_dict = {
-            "video_frames": pixel_values,
+            "video_frames": video_frames,
             "video_height": 320,
             "video_width": 512,
         }
