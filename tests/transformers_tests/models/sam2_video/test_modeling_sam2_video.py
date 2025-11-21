@@ -26,7 +26,6 @@ from transformers import (
     Sam2VideoPromptEncoderConfig,
     Sam2VisionConfig,
     Sam2HieraDetConfig,
-    Sam2VideoProcessor as PtSam2VideoProcessor,
 )
 
 import mindspore as ms
@@ -34,7 +33,7 @@ import mindspore as ms
 from tests.modeling_test_utils import compute_diffs, generalized_parse_args, get_modules
 from tests.transformers_tests.models.modeling_common import floats_numpy
 from mindone.transformers.models.sam2_video.modeling_sam2_video import Sam2VideoInferenceSession
-from mindone.transformers.models.sam2_video.processing_sam2_video import Sam2VideoProcessor as MsSam2VideoProcessor
+
 
 DTYPE_AND_THRESHOLDS = {"fp32": 5e-4, "fp16": 5e-3, "bf16": 5e-2}
 MODES = [1]
@@ -172,7 +171,7 @@ class Sam2VideoModelTester:
         self.mask_decoder_tester = Sam2VideoMaskDecoderTester()
 
     def prepare_config_and_inputs(self):
-        pixel_values = floats_numpy([self.batch_size, self.num_channels, self.image_size, self.image_size])
+        pixel_values = floats_numpy([16, self.num_channels, self.image_size, self.image_size])
         config = self.get_config()
 
         return config, pixel_values
@@ -215,30 +214,11 @@ class Sam2VideoModelTester:
     def prepare_config_and_inputs_for_common(self):
         config_and_inputs = self.prepare_config_and_inputs()
         config, pixel_values = config_and_inputs
-        
-        # Create video frames as list of numpy arrays: (num_frames, height, width, channels)
-        num_frames = 3
-        # Convert from (channels, height, width) to (height, width, channels) for video frames
-        video_frames = []
-        for i in range(num_frames):
-            frame = pixel_values[0].transpose(1, 2, 0)  # (C, H, W) -> (H, W, C)
-            video_frames.append(frame)
-        
-        # Create point inputs in the format expected by processor: [[[[x, y]]]]
-        # Format: list[list[list[list[float]]]] - batch, point_batch, num_points, 2
-        points = [[[[self.image_size * 0.5, self.image_size * 0.5]]]]  # Center point
-        labels = [[[1]]]  # Positive point label
-        
-        frame_idx = 0
-        obj_id = 1
-        
-        # Return data for processor-based session creation
+
         inputs_dict = {
-            "video_frames": video_frames,
-            "points": points,
-            "labels": labels,
-            "frame_idx": frame_idx,
-            "obj_id": obj_id,
+            "video_frames": pixel_values,
+            "video_height": 320,
+            "video_width": 512,
         }
         return config, inputs_dict
 
@@ -278,75 +258,31 @@ def test_named_modules(
     inputs_kwargs = dict(inputs_kwargs) if inputs_kwargs else {}
     
     # Extract session creation data from inputs_kwargs
-    video_frames = inputs_kwargs.pop("video_frames", None)
-    points = inputs_kwargs.pop("points", None)
-    labels = inputs_kwargs.pop("labels", None)
-    frame_idx = inputs_kwargs.pop("frame_idx", None)
-    obj_id = inputs_kwargs.pop("obj_id", None)
-    
-    # Check if all required data is present
-    if video_frames is None or points is None or labels is None or frame_idx is None or obj_id is None:
-        raise ValueError(
-            f"Missing required session data in inputs_kwargs. "
-            f"Expected keys: video_frames, points, labels, frame_idx, obj_id. "
-            f"Got keys: {list(inputs_kwargs.keys()) if inputs_kwargs else 'empty'}"
-        )
-    
-    # Create processors
-    pt_processor = PtSam2VideoProcessor.from_pretrained("facebook/sam2-hiera-tiny")
-    ms_processor = MsSam2VideoProcessor.from_pretrained("facebook/sam2-hiera-tiny")
-    
-    # Set dtype for processors
-    if pt_dtype == "fp16":
-        pt_torch_dtype = torch.float16
-    elif pt_dtype == "bf16":
-        pt_torch_dtype = torch.bfloat16
-    else:
-        pt_torch_dtype = torch.float32
-    
-    if ms_dtype == "fp16":
-        ms_ms_dtype = ms.float16
-    elif ms_dtype == "bf16":
-        ms_ms_dtype = ms.bfloat16
-    else:
-        ms_ms_dtype = ms.float32
-    
-    # Initialize video inference sessions using processors
-    pt_inference_session = pt_processor.init_video_session(
+    video_frames = inputs_kwargs.pop("pixel_values", None)
+    video_height = inputs_kwargs.pop("video_height", None)
+    video_width = inputs_kwargs.pop("video_width", None)
+    session_ms = Sam2VideoInferenceSession(
         video=video_frames,
-        dtype=pt_torch_dtype,
+        video_height=video_height,
+        video_width=video_width,
+        dtype=ms_dtype,
     )
-    ms_inference_session = ms_processor.init_video_session(
+    session_pt = Sam2VideoInferenceSession(
         video=video_frames,
-        dtype=ms_ms_dtype,
+        video_height=video_height,
+        video_width=video_width,
+        dtype=pt_dtype,
     )
-    
-    # Add inputs to inference sessions using processors
-    pt_processor.add_inputs_to_inference_session(
-        inference_session=pt_inference_session,
-        frame_idx=frame_idx,
-        obj_ids=obj_id,
-        input_points=points,
-        input_labels=labels,
-    )
-    ms_processor.add_inputs_to_inference_session(
-        inference_session=ms_inference_session,
-        frame_idx=frame_idx,
-        obj_ids=obj_id,
-        input_points=points,
-        input_labels=labels,
-    )
-    
     # Parse remaining args
     pt_inputs_args, pt_inputs_kwargs, ms_inputs_args, ms_inputs_kwargs = generalized_parse_args(
         pt_dtype, ms_dtype, *inputs_args, **inputs_kwargs
     )
     
     # Add inference sessions to kwargs
-    pt_inputs_kwargs["inference_session"] = pt_inference_session
-    pt_inputs_kwargs["frame_idx"] = frame_idx
-    ms_inputs_kwargs["inference_session"] = ms_inference_session
-    ms_inputs_kwargs["frame_idx"] = frame_idx
+    pt_inputs_kwargs["inference_session"] = session_pt
+    pt_inputs_kwargs["frame_idx"] = 0
+    ms_inputs_kwargs["inference_session"] = session_ms
+    ms_inputs_kwargs["frame_idx"] = 0
 
     with torch.no_grad():
         pt_outputs = pt_model(*pt_inputs_args, **pt_inputs_kwargs)
@@ -372,4 +308,3 @@ def test_named_modules(
         f"ms_dtype: {ms_dtype}, pt_type:{pt_dtype}, "
         f"Outputs({np.array(diffs).tolist()}) has diff bigger than {THRESHOLD}"
     )
-
