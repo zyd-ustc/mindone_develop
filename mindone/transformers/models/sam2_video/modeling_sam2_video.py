@@ -300,38 +300,6 @@ class Sam2VideoInferenceSession:
         self.frames_tracked_per_obj.clear()
         self.obj_with_new_inputs = []
         self.cache.clear_all()
-    def print_all(self):
-        """Print all parameters of the session."""
-        print("=" * 60)
-        print("Sam2VideoInferenceSession Parameters:")
-        print("=" * 60)
-        print(f"processed_frames: {self.processed_frames}")
-        print(f"  - Number of frames: {self.num_frames}")
-        if self.processed_frames:
-            print(f"  - Frame indices: {list(self.processed_frames.keys())}")
-        print(f"video_height: {self.video_height}")
-        print(f"video_width: {self.video_width}")
-        print(f"dtype: {self.dtype}")
-        print(f"max_vision_features_cache_size: {self.max_vision_features_cache_size}")
-        print(f"\nCache:")
-        print(f"  - max_vision_features_cache_size: {self.cache.max_vision_features_cache_size}")
-        print(f"  - Number of cached frames: {len(self.cache._vision_features)}")
-        if self.cache._vision_features:
-            print(f"  - Cached frame indices: {list(self.cache._vision_features.keys())}")
-        print(f"\nObject Tracking State:")
-        print(f"_obj_id_to_idx: {dict(self._obj_id_to_idx)}")
-        print(f"_obj_idx_to_id: {dict(self._obj_idx_to_id)}")
-        print(f"obj_ids: {self.obj_ids}")
-        print(f"Number of objects: {self.get_obj_num()}")
-        print(f"\nUser Inputs:")
-        print(f"point_inputs_per_obj: {self.point_inputs_per_obj}")
-        print(f"mask_inputs_per_obj: {self.mask_inputs_per_obj}")
-        print(f"\nModel Outputs/History:")
-        print(f"output_dict_per_obj: {self.output_dict_per_obj}")
-        print(f"frames_tracked_per_obj: {self.frames_tracked_per_obj}")
-        print(f"\nSession State:")
-        print(f"obj_with_new_inputs: {self.obj_with_new_inputs}")
-        print("=" * 60)
 
 
 class Sam2VideoLayerNorm(mint.nn.LayerNorm):
