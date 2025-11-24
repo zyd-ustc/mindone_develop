@@ -248,6 +248,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("sam2_video", "Sam2VideoModel"),
         ("sam_hq", "SamHQModel"),
         ("sam_hq_vision_model", "SamHQVisionModel"),
+        ("sam2_video", "Sam2VideoModel"),
         ("seamless_m4t", "SeamlessM4TModel"),
         ("seamless_m4t_v2", "SeamlessM4Tv2Model"),
         ("seed_oss", "SeedOssModel"),
@@ -1362,6 +1363,7 @@ MODEL_FOR_MASK_GENERATION_MAPPING_NAMES = OrderedDict(
         ("sam", "SamModel"),
         ("sam2_video", "Sam2VideoModel"),
         ("sam_hq", "SamHQModel"),
+        ("sam2_video", "Sam2Model"),
     ]
 )
 
