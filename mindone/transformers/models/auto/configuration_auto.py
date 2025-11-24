@@ -503,6 +503,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("sam", "SAM"),
         ("sam2", "SAM2"),
         ("sam2_hiera_det_model", "SAM2HieraDet"),
+        ("sam2_video", "Sam2VideoModel"),
         ("sam2_vision_model", "SAM2Vision"),
         ("seamless_m4t", "SeamlessM4T"),
         ("seamless_m4t_v2", "SeamlessM4Tv2"),
