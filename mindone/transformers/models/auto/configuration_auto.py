@@ -229,6 +229,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("sam", "SamConfig"),
         ("sam2", "Sam2Config"),
         ("sam2_hiera_det_model", "Sam2HieraDetConfig"),
+        ("sam2_video", "Sam2VideoConfig"),
         ("sam2_vision_model", "Sam2VisionConfig"),
         ("seamless_m4t", "SeamlessM4TConfig"),
         ("seamless_m4t_v2", "SeamlessM4Tv2Config"),
