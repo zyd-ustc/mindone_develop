@@ -1363,7 +1363,7 @@ MODEL_FOR_MASK_GENERATION_MAPPING_NAMES = OrderedDict(
         ("sam", "SamModel"),
         ("sam2_video", "Sam2VideoModel"),
         ("sam_hq", "SamHQModel"),
-        ("sam2_video", "Sam2Model"),
+        ("sam2_video", "Sam2VideoModel"),
     ]
 )
 
